@@ -1,0 +1,51 @@
+service: serverless-blog-announcer
+
+plugins:
+  - serverless-dotenv-plugin
+  - serverless-webpack
+
+custom:
+  webpack:
+    packager: 'yarn'
+    packagerOptions: {}
+    includeModules:
+      forceExclude:
+        - aws-sdk
+    webpackConfig: 'webpack.config.js'
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: us-east-1
+  environment:
+    GITHUB_ACCESS_TOKEN: ${env:GITHUB_ACCESS_TOKEN}
+    TWITTER_API_KEY: ${env:TWITTER_API_KEY}
+    TWITTER_API_SECRET: ${env:TWITTER_API_SECRET}
+    TWITTER_ACCESS_TOKEN: ${env:TWITTER_ACCESS_TOKEN}
+    TWITTER_ACCESS_SECRET: ${env:TWITTER_ACCESS_SECRET}
+    JWT_SECRET: ${env:JWT_SECRET}
+    BLOG_URL: "https://blog.selcukcihan.com"
+    GITHUB_USERNAME: "selcukcihan"
+    GITHUB_COMMIT_URI_PREFIX: "https://api.github.com/repos/selcukcihan/defter/commits/"
+
+package:
+  individually: true
+  exclude:
+    - ".*/**"
+
+functions:
+  verifyToken:
+    handler: auth/VerifyToken.auth
+
+  announceBlogPost:
+    handler: blog/NewPostHandler.announceBlogPost
+    events:
+      - http:
+          path: new
+          method: post
+          authorizer:
+            name: verifyToken
+            type: request
+            identitySource: method.request.header.x-webhook-signature
+          cors: true
